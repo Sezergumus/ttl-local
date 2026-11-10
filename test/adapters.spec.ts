@@ -66,6 +66,12 @@ describe('Storage Adapters & SSR Fallbacks', () => {
       expect(isLocalStorageAvailable()).toBe(false);
     });
 
+    it('should return false when window.localStorage is null or undefined', () => {
+      // @ts-expect-error mock window with null localStorage
+      globalThis.window = { localStorage: null };
+      expect(isLocalStorageAvailable()).toBe(false);
+    });
+
     it('should automatically fall back to MemoryStorageAdapter in SSR', () => {
       // @ts-expect-error simulate SSR
       delete globalThis.window;

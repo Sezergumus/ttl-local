@@ -185,28 +185,74 @@ describe('Edge Cases, Validation & Error Handling', () => {
       expect(mockQuotaStorage.getItem('quota:item1')).toBeNull();
     });
 
-    it('should rethrow QuotaExceededError if pruning does not free enough space', () => {
-      const permanentQuotaStorage = {
+    it('should rethrow original QuotaExceededError if retry also throws', () => {
+      let mockTime = 1000;
+      let setAttempts = 0;
+
+      const failingRetryStorage = {
         store: new Map<string, string>(),
-        getItem: () => null,
-        setItem: () => {
-          const err = new Error('QuotaExceededError');
+        getItem(k: string) {
+          return this.store.get(k) ?? null;
+        },
+        setItem() {
+          setAttempts++;
+          const err = new Error('Quota exceeded permanently');
           err.name = 'QuotaExceededError';
           throw err;
         },
-        removeItem: () => {},
-        clear: () => {},
-        key: () => null,
-        length: 0,
+        removeItem(k: string) {
+          this.store.delete(k);
+        },
+        clear() {
+          this.store.clear();
+        },
+        key(i: number) {
+          return Array.from(this.store.keys())[i] ?? null;
+        },
+        get length() {
+          return this.store.size;
+        },
       };
 
-      const fullStore = new TtlStorage({
-        storage: permanentQuotaStorage,
+      const failingStore = new TtlStorage({
+        storage: failingRetryStorage,
+        prefix: 'fail:',
+        now: () => mockTime,
       });
 
-      expect(() => fullStore.setItem('fail', 'data', 1000)).toThrow(
-        /QuotaExceededError/
+      // Manually plant an expired item so prune() returns > 0
+      failingRetryStorage.store.set(
+        'fail:old',
+        JSON.stringify({ value: 1, expiresAt: 500, createdAt: 100, __ttl__: true })
       );
+
+      expect(() => failingStore.setItem('newKey', 'value', 1000)).toThrow(
+        /Quota exceeded permanently/
+      );
+      expect(setAttempts).toBe(2); // First attempt + 1 retry
+    });
+
+    it('should safely handle keys that return null during prune', () => {
+      const mockStorage = {
+        store: new Map<string, string>([['test:phantom', '']]),
+        getItem() {
+          return null; // Simulate key disappearing concurrently
+        },
+        setItem() {},
+        removeItem() {},
+        clear() {},
+        key(i: number) {
+          return i === 0 ? 'test:phantom' : null;
+        },
+        length: 1,
+      };
+
+      const store = new TtlStorage({
+        storage: mockStorage,
+        prefix: 'test:',
+      });
+
+      expect(store.prune()).toBe(0);
     });
 
     it('should rethrow non-quota errors immediately', () => {
@@ -225,6 +271,89 @@ describe('Edge Cases, Validation & Error Handling', () => {
       expect(() => errorStore.setItem('test', 'data', 1000)).toThrow(
         'Disk IO failure'
       );
+    });
+
+    it('should handle non-Error thrown exceptions during setItem', () => {
+      const stringThrowStorage = {
+        getItem: () => null,
+        setItem: () => {
+          // eslint-disable-next-line @typescript-eslint/no-throw-literal
+          throw 'String exception';
+        },
+        removeItem: () => {},
+        clear: () => {},
+        key: () => null,
+        length: 0,
+      };
+
+      const throwStore = new TtlStorage({ storage: stringThrowStorage });
+      expect(() => throwStore.setItem('test', 'data', 1000)).toThrow(
+        'String exception'
+      );
+    });
+
+    it('should recognize NS_ERROR_DOM_QUOTA_REACHED and code 22 as Quota errors', () => {
+      let throwGecko = false;
+      let throwCode22 = false;
+      let mockTime = 1000;
+
+      const geckoQuotaStorage = {
+        store: new Map<string, string>(),
+        getItem(k: string) {
+          return this.store.get(k) ?? null;
+        },
+        setItem(k: string, v: string) {
+          if (throwGecko) {
+            throwGecko = false;
+            const err = new Error('Firefox quota reached');
+            err.name = 'NS_ERROR_DOM_QUOTA_REACHED';
+            throw err;
+          }
+          if (throwCode22) {
+            throwCode22 = false;
+            const err = new Error('Legacy quota reached');
+            (err as unknown as { code: number }).code = 22;
+            throw err;
+          }
+          this.store.set(k, v);
+        },
+        removeItem(k: string) {
+          this.store.delete(k);
+        },
+        clear() {
+          this.store.clear();
+        },
+        key(i: number) {
+          return Array.from(this.store.keys())[i] ?? null;
+        },
+        get length() {
+          return this.store.size;
+        },
+      };
+
+      const geckoStore = new TtlStorage({
+        storage: geckoQuotaStorage,
+        prefix: 'gecko:',
+        now: () => mockTime,
+      });
+
+      // 1. Set item to expire
+      geckoStore.setItem('old1', 'val', 100);
+      mockTime += 200; // expired
+
+      // 2. Enable gecko quota throw, set new1 -> catches quota error, prunes old1, retries and succeeds!
+      throwGecko = true;
+      geckoStore.setItem('new1', 'val1', 1000);
+      expect(geckoStore.getItem('new1')).toBe('val1');
+
+      // 3. Set another to expire
+      geckoStore.setItem('old2', 'val', 100);
+      mockTime += 200; // expired
+
+      // 4. Enable code 22 throw, set new2 -> catches quota error, prunes old2, retries and succeeds!
+      throwCode22 = true;
+      geckoStore.setItem('new2', 'val2', 1000);
+      expect(geckoStore.getItem('new2')).toBe('val2');
     });
   });
 });

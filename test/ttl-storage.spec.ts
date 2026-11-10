@@ -283,6 +283,19 @@ describe('TtlStorage - Core & TTL Operations', () => {
       const keys = storage.getAllKeys();
       expect(keys.sort()).toEqual(['k1', 'k2']);
     });
+
+    it('should return all keys when prefix is empty string', () => {
+      const unprefixedStorage = new TtlStorage({
+        storage: customStorage,
+        prefix: '',
+        now: () => mockTime,
+      });
+
+      unprefixedStorage.setItem('u1', 'val1', 5000);
+      unprefixedStorage.setItem('u2', 'val2', 5000);
+
+      expect(unprefixedStorage.getAllKeys().sort()).toEqual(['u1', 'u2']);
+    });
   });
 
   describe('Prefix & Namespace isolation', () => {
