@@ -16,9 +16,7 @@ describe('Edge Cases, Validation & Error Handling', () => {
 
   describe('Key validation', () => {
     it('should throw TypeError on invalid or empty keys', () => {
-      // @ts-expect-error test runtime validation
       expect(() => storage.setItem('', 'val', 1000)).toThrow(TypeError);
-      // @ts-expect-error test runtime validation
       expect(() => storage.setItem('   ', 'val', 1000)).toThrow(TypeError);
       // @ts-expect-error test runtime validation
       expect(() => storage.setItem(null, 'val', 1000)).toThrow(TypeError);
@@ -27,27 +25,20 @@ describe('Edge Cases, Validation & Error Handling', () => {
       // @ts-expect-error test runtime validation
       expect(() => storage.setItem({}, 'val', 1000)).toThrow(TypeError);
 
-      // @ts-expect-error test runtime validation
       expect(() => storage.getItem('')).toThrow(TypeError);
-      // @ts-expect-error test runtime validation
       expect(() => storage.removeItem('')).toThrow(TypeError);
-      // @ts-expect-error test runtime validation
       expect(() => storage.touch('', 1000)).toThrow(TypeError);
-      // @ts-expect-error test runtime validation
       expect(() => storage.getWithExpiry('')).toThrow(TypeError);
     });
   });
 
   describe('TTL validation', () => {
     it('should throw TypeError on invalid TTL values', () => {
-      // @ts-expect-error test runtime validation
       expect(() => storage.setItem('key', 'val', -10)).toThrow(TypeError);
-      // @ts-expect-error test runtime validation
       expect(() => storage.setItem('key', 'val', NaN)).toThrow(TypeError);
       // @ts-expect-error test runtime validation
       expect(() => storage.setItem('key', 'val', '1000')).toThrow(TypeError);
 
-      // @ts-expect-error test runtime validation
       expect(() => storage.touch('key', -50)).toThrow(TypeError);
     });
 

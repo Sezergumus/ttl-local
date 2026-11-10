@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
+// @ts-expect-error testing compiled ESM bundle output directly
 import * as esmBundle from '../dist/index.mjs';
 
 const require = createRequire(import.meta.url);
