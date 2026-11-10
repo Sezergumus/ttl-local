@@ -1,0 +1,50 @@
+{
+  "name": "ttl-local",
+  "version": "1.0.0",
+  "description": "Production-ready, zero-dependency, dual-format (ESM/CJS) TypeScript localStorage wrapper with TTL expiration and SSR safety",
+  "keywords": [
+    "localstorage",
+    "ttl",
+    "cache",
+    "expiration",
+    "expire",
+    "storage",
+    "browser",
+    "ssr",
+    "typescript",
+    "in-memory-fallback"
+  ],
+  "author": "Sezer Gümüş <sezer2004@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@vitest/coverage-v8": "^3.0.5",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
