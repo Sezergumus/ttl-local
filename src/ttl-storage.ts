@@ -410,12 +410,14 @@ export class TtlStorage {
    * Detects if an error is a QuotaExceededError across browsers.
    */
   private isQuotaExceededError(err: unknown): boolean {
+    if (!(err instanceof Error)) {
+      return false;
+    }
+    const hasCode = 'code' in err && typeof (err as { code: unknown }).code === 'number';
     return (
-      err instanceof Error &&
-      (err.name === 'QuotaExceededError' ||
-        err.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
-        (typeof (err as { code?: unknown }).code === 'number' &&
-          (err as { code: number }).code === 22))
+      err.name === 'QuotaExceededError' ||
+      err.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      (hasCode && (err as { code: number }).code === 22)
     );
   }
 }
