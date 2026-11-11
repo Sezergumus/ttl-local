@@ -262,4 +262,4 @@ const { setItem, getItem, TtlStorage } = require('ttl-local');
 
 ## License
 
-[MIT](LICENSE) © [Sezer Gümüş](mailto:sezer2004@gmail.com)
+[MIT](LICENSE) © [Sezer Gümüş](https://github.com/sezer2004)
